@@ -35,9 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     const json = await response.json()
-    res.status(200).json(json)
-  } catch (err: any) {
-    console.error('API Error:', err)
-    res.status(500).json({ error: 'Internal Server Error' })
-  }
+
+if (!response.ok) {
+  console.error('GPT API Error:', json)
+  return NextResponse.json({ error: 'GPT API Error', detail: json }, { status: 500 })
 }
+
+return NextResponse.json(json.choices[0].message)
+
