@@ -1,5 +1,4 @@
-// pages/api/chat.ts
-
+// ✅ สำหรับ Pages Router (pages/api/chat.ts)
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' })
@@ -7,14 +6,13 @@ export default async function handler(req, res) {
 
   const GPT_API_KEY = process.env.GPT_API_KEY
   const ENDPOINT = 'https://api.openai.com/v1/chat/completions'
+
   const { messages = [], memory = [] } = req.body
 
   if (!GPT_API_KEY) {
-    console.error("❌ GPT_API_KEY ไม่ถูกโหลดจาก Environment Variables")
+    console.error("❌ GPT_API_KEY ไม่ถูกโหลดจาก ENV")
     return res.status(500).json({ error: '❌ GPT_API_KEY ไม่ถูกโหลด' })
   }
-
-  console.log("✅ เรียกใช้ GPT API ด้วย key:", GPT_API_KEY.slice(0, 10) + "...")
 
   try {
     const response = await fetch(ENDPOINT, {
