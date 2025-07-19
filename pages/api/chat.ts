@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-const GPT_API_KEY = process.env.GPT_API_KEY || ''
+const GPT_API_KEY = process.env.GPT_API_KEY || process.env.GPT_4o_API || ''
 const ENDPOINT = 'https://api.openai.com/v1/chat/completions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
