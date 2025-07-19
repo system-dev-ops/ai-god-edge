@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const GPT_API_KEY = process.env.OPENAI_API_KEY || ''
+const GPT_API_KEY = process.env.GPT_API_KEY || ''
 const ENDPOINT = 'https://api.openai.com/v1/chat/completions'
 
 export async function POST(req: NextRequest) {
