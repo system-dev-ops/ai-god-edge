@@ -1,5 +1,8 @@
+// pages/api/chat.ts
+import type { NextApiRequest, NextApiResponse } from 'next'; // <--- เพิ่มบรรทัดนี้เพื่อนำเข้า Type
+
 // ✅ สำหรับ Pages Router
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) { // <--- แก้ไขตรงนี้: เพิ่ม Type ให้ req และ res
   // ตรวจสอบว่า HTTP Method เป็น POST เท่านั้น
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
