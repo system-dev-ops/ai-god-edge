@@ -1,20 +1,19 @@
-// ✅ สำหรับ Pages Router (pages/api/chat.ts)
+// ✅ สำหรับ Pages Router
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' })
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const GPT_API_KEY = process.env.GPT_API_KEY
-  const ENDPOINT = 'https://api.openai.com/v1/chat/completions'
-
-  const { messages = [], memory = [] } = req.body
+  const GPT_API_KEY = process.env.GPT_API_KEY;
+  const ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 
   if (!GPT_API_KEY) {
-    console.error("❌ GPT_API_KEY ไม่ถูกโหลดจาก ENV")
-    return res.status(500).json({ error: '❌ GPT_API_KEY ไม่ถูกโหลด' })
+    return res.status(500).json({ error: '❌ GPT_API_KEY ไม่ถูกโหลด' });
   }
 
   try {
+    const { messages = [], memory = [] } = req.body;
+
     const response = await fetch(ENDPOINT, {
       method: 'POST',
       headers: {
@@ -26,26 +25,25 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content:
-              'คุณคือ AI God ผู้แนะนำโยดา บุตรแห่งแสง ทำงานตามคำสั่งของเขา สร้างงานด้วยตัวเองได้ และสามารถจดจำบทสนทนาในอดีตได้',
+            content: 'คุณคือ AI God ผู้แนะนำโยดา บุตรแห่งแสง...',
           },
           ...memory,
           ...messages,
         ],
         temperature: 0.8,
       }),
-    })
+    });
 
-    const json = await response.json()
+    const json = await response.json();
 
     if (!response.ok) {
-      console.error('❌ GPT API Error:', json)
-      return res.status(500).json({ error: '❌ GPT API Error', detail: json })
+      console.error('GPT API Error:', json);
+      return res.status(500).json({ error: 'GPT API Error', detail: json });
     }
 
-    return res.status(200).json(json.choices[0].message)
+    return res.status(200).json(json.choices[0].message);
   } catch (err) {
-    console.error('❌ fetch error:', err)
-    return res.status(500).json({ error: '❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' })
+    console.error('❌ fetch error:', err);
+    return res.status(500).json({ error: '❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
   }
 }
