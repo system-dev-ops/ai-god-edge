@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { useRouter } from 'next/router' // เพิ่ม useRouter
+import { useRouter } from 'next/router'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,7 +13,7 @@ const supabase = createClient(
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
 
   useEffect(() => {
     // Redirect if already logged in
@@ -35,13 +35,15 @@ export default function LoginPage() {
     );
 
     return () => {
-      authListener?.unsubscribe();
+      // แก้ไขตรงนี้: เรียก unsubscribe ผ่าน authListener.subscription
+      authListener?.subscription?.unsubscribe(); 
     };
-  }, [router]); // Add router to dependency array
+  }, [router]);
 
   const handleLogin = async () => {
     setMessage(''); // Clear previous messages
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/admin' } }); // เพิ่ม emailRedirectTo
+    // เพิ่ม options: { emailRedirectTo: window.location.origin + '/admin' } เพื่อให้ Supabase Redirect กลับมาที่หน้า Admin
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/admin' } }); 
     if (error) {
       setMessage('❌ ไม่สามารถส่งลิงก์เข้าสู่ระบบได้: ' + error.message);
     } else {
