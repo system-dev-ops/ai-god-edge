@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient, User } from '@supabase/supabase-js' // เพิ่ม User Type
+import { createClient, User } from '@supabase/supabase-js'
 
 // กำหนด Interface สำหรับ Chat Log เพื่อความชัดเจนของ Type
 interface ChatLog {
@@ -19,8 +19,7 @@ const supabase = createClient(
 )
 
 export default function AdminPage() {
-  // ใช้ User | null Type สำหรับ user
-  const [user, setUser] = useState<User | null>(null) 
+  const [user, setUser] = useState<User | null>(null)
   const [logs, setLogs] = useState<ChatLog[]>([])
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
@@ -53,7 +52,8 @@ export default function AdminPage() {
 
     // Cleanup function
     return () => {
-      authListener?.unsubscribe();
+      // แก้ไขตรงนี้: เรียก unsubscribe ผ่าน authListener.subscription
+      authListener?.subscription?.unsubscribe(); 
     };
 
   }, [])
@@ -62,7 +62,7 @@ export default function AdminPage() {
     if (!user) return
 
     const fetchLogs = async () => {
-      setLoading(true); // ตั้งค่า loading เป็น true ก่อนเริ่ม fetch
+      setLoading(true);
       const { data, error } = await supabase
         .from('chat_logs')
         .select('*')
@@ -72,9 +72,9 @@ export default function AdminPage() {
         setLogs(data as ChatLog[] || [])
       } else {
         console.error('❌ Error fetching logs:', error)
-        alert('❌ ไม่สามารถดึงข้อมูล Logs ได้: ' + error.message); // แจ้งเตือนผู้ใช้
+        alert('❌ ไม่สามารถดึงข้อมูล Logs ได้: ' + error.message);
       }
-      setLoading(false); // หยุด loading หลังจาก fetch เสร็จ
+      setLoading(false);
     }
 
     fetchLogs()
@@ -95,7 +95,7 @@ export default function AdminPage() {
       alert('❌ ไม่สามารถออกจากระบบได้: ' + error.message);
     } else {
       alert('✅ ออกจากระบบสำเร็จ');
-      setUser(null); // เคลียร์ user state
+      setUser(null);
     }
   };
 
@@ -113,7 +113,7 @@ export default function AdminPage() {
     link.click()
   }
 
-  if (loading) return <div>🔄 กำลังโหลด...</div> // ใช้ loading state ที่นี่
+  if (loading) return <div>🔄 กำลังโหลด...</div>
 
   if (!user) {
     return (
