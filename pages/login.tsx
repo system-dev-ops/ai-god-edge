@@ -1,8 +1,9 @@
 // pages/login.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { useRouter } from 'next/router' // เพิ่ม useRouter
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,13 +13,39 @@ const supabase = createClient(
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
+  const router = useRouter(); // Initialize useRouter
+
+  useEffect(() => {
+    // Redirect if already logged in
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/admin'); // Redirect to admin page if session exists
+      }
+    };
+    checkUser();
+
+    // Listen for auth state changes (e.g., after clicking magic link)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN') {
+          router.push('/admin'); // Redirect to admin page
+        }
+      }
+    );
+
+    return () => {
+      authListener?.unsubscribe();
+    };
+  }, [router]); // Add router to dependency array
 
   const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOtp({ email })
+    setMessage(''); // Clear previous messages
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/admin' } }); // เพิ่ม emailRedirectTo
     if (error) {
-      setMessage('❌ ไม่สามารถส่งลิงก์เข้าสู่ระบบได้: ' + error.message)
+      setMessage('❌ ไม่สามารถส่งลิงก์เข้าสู่ระบบได้: ' + error.message);
     } else {
-      setMessage('✅ ส่งลิงก์เข้าสู่อีเมลแล้ว กรุณาตรวจสอบ Inbox หรือ Junk Mail')
+      setMessage('✅ ส่งลิงก์เข้าสู่อีเมลแล้ว กรุณาตรวจสอบ Inbox หรือ Junk Mail');
     }
   }
 
