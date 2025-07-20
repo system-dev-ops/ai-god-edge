@@ -1,6 +1,6 @@
 'use client'
 
-import { v4 as uuidv4 } from 'uuid' // เพิ่ม import uuidv4
+import { v4 as uuidv4 } from 'uuid'
 import { useEffect, useRef, useState } from 'react'
 
 export default function Home() {
@@ -8,10 +8,13 @@ export default function Home() {
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([])
   const [loading, setLoading] = useState(false)
 
-  const sessionIdRef = useRef<string>('') // เพิ่ม useRef สำหรับ session id
+  const sessionIdRef = useRef<string>('')
 
   useEffect(() => {
-    sessionIdRef.current = uuidv4() // กำหนด session id ครั้งเดียวเมื่อ component mount
+    // กำหนด session id ครั้งเดียวเมื่อ component mount
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = uuidv4()
+    }
   }, [])
 
   const handleSend = async () => {
@@ -19,30 +22,40 @@ export default function Home() {
     const userMessage = { role: 'user', content: input.trim() }
 
     const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
+    setMessages(newMessages) // อัปเดต UI ทันทีด้วยข้อความผู้ใช้
     setInput('')
     setLoading(true)
 
     try {
       const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', // ตรวจสอบให้แน่ใจว่า Method เป็น POST
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           messages: newMessages,
-          session_id: sessionIdRef.current, // เพิ่ม session_id ใน body
+          session_id: sessionIdRef.current,
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json() // รับ JSON response จาก API Route
 
       if (res.ok) {
+        // ถ้า API ตอบกลับ 200 OK และมีโครงสร้างตามที่คาดหวัง
         if (data && typeof data.content === 'string' && typeof data.role === 'string') {
-          setMessages((prev) => [...prev, data])
+          const aiMessage = data // data คือ object ข้อความของ AI โดยตรง
+          setMessages((prev) => [...prev, aiMessage]) // เพิ่มข้อความ AI ลงใน state
         } else {
-          console.error('Unexpected response:', data) // แสดงข้อมูล response ที่ไม่คาดคิด
-          setMessages((prev) => [...prev, { role: 'assistant', content: '❌ โครงสร้างคำตอบจาก AI ไม่ถูกต้อง' }])
+          // กรณีที่ API ตอบกลับ 200 OK แต่โครงสร้าง JSON ไม่ตรงตามที่คาดหวัง
+          console.error('Unexpected successful API response structure:', data)
+          setMessages((prev) => [
+            ...prev,
+            { role: 'assistant', content: '❌ โครงสร้างคำตอบจาก AI ไม่ถูกต้อง' },
+          ])
         }
       } else {
+        // กรณีที่ API Route ตอบกลับสถานะอื่นที่ไม่ใช่ 200 OK (เช่น 401, 405, 500)
+        console.error('API error (non-200 status):', data)
         const apiErrorDetail = data.detail || data.error || 'ไม่ทราบข้อผิดพลาด';
         setMessages((prev) => [
           ...prev,
@@ -50,7 +63,8 @@ export default function Home() {
         ])
       }
     } catch (err) {
-      console.error('Fetch or JSON parsing error:', err) // แสดงข้อผิดพลาดในการ fetch หรือ parse JSON
+      // กรณีเกิดข้อผิดพลาดในการ Fetch (เช่น Network Error) หรือการแปลง JSON
+      console.error('Fetch or JSON parsing error:', err)
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: '❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ หรือข้อมูลตอบกลับไม่ถูกต้อง' },
@@ -60,7 +74,7 @@ export default function Home() {
     }
   }
 
-  return ( // เพิ่ม return statement และ JSX ที่หายไป
+  return (
     <main style={{ padding: 20, maxWidth: 600, margin: 'auto' }}>
       <h1>AI God Chat (GPT-4o)</h1>
 
