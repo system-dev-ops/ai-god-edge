@@ -1,7 +1,9 @@
+// pages/login.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { useRouter } from 'next/router'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,32 +12,63 @@ const supabase = createClient(
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirect if already logged in
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/admin'); // Redirect to admin page if session exists
+      }
+    };
+    checkUser();
+
+    // Listen for auth state changes (e.g., after clicking magic link)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN') {
+          router.push('/admin'); // Redirect to admin page
+        }
+      }
+    );
+
+    return () => {
+      // แก้ไขตรงนี้: เรียก unsubscribe ผ่าน authListener.subscription
+      authListener?.subscription?.unsubscribe(); 
+    };
+  }, [router]);
 
   const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOtp({ email })
+    setMessage(''); // Clear previous messages
+    // เพิ่ม options: { emailRedirectTo: window.location.origin + '/admin' } เพื่อให้ Supabase Redirect กลับมาที่หน้า Admin
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/admin' } }); 
     if (error) {
-      setStatus('❌ ไม่สามารถส่งลิงก์เข้าสู่ระบบได้: ' + error.message)
+      setMessage('❌ ไม่สามารถส่งลิงก์เข้าสู่ระบบได้: ' + error.message);
     } else {
-      setStatus('✅ ส่งลิงก์เข้าสู่ระบบไปยังอีเมลแล้ว กรุณาตรวจสอบ Inbox หรือ Junk Mail')
+      setMessage('✅ ส่งลิงก์เข้าสู่อีเมลแล้ว กรุณาตรวจสอบ Inbox หรือ Junk Mail');
     }
   }
 
   return (
-    <main style={{ padding: 20 }}>
-      <h2>🔐 เข้าสู่ระบบ</h2>
+    <main style={{ padding: 20, maxWidth: 400, margin: 'auto' }}>
+      <h1>🔐 เข้าสู่ระบบ</h1>
       <input
         type="email"
         placeholder="กรอกอีเมลของคุณ"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        style={{ padding: 10, width: '300px' }}
+        style={{ padding: 10, width: '100%' }}
       />
       <br />
-      <button onClick={handleLogin} style={{ marginTop: 10, padding: '10px 20px' }}>
+      <button
+        onClick={handleLogin}
+        style={{ marginTop: 10, padding: '10px 20px', width: '100%' }}
+      >
         ส่งลิงก์เข้าสู่ระบบ
       </button>
-      {status && <p>{status}</p>}
+      {message && <p style={{ marginTop: 20 }}>{message}</p>}
     </main>
   )
 }
