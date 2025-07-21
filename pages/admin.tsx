@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { createClient, User } from '@supabase/supabase-js'
 
-// กำหนด Interface สำหรับ Chat Log เพื่อความชัดเจนของ Type
 interface ChatLog {
   id: string;
   session_id: string;
@@ -12,15 +11,14 @@ interface ChatLog {
   created_at: string;
 }
 
-// ✅ ใส่ ENV จาก .env.local หรือ Vercel Environment
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 export default function AdminPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [logs, setLogs] = useState<ChatLog[]>([])
+  const [user, setUser] = useState<User | null>(null) 
+  const [logs, setLogs] = useState<ChatLog[]>([]) 
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
 
@@ -39,7 +37,6 @@ export default function AdminPage() {
 
     getSession()
 
-    // เพิ่ม listener สำหรับ Auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
@@ -50,9 +47,7 @@ export default function AdminPage() {
       }
     );
 
-    // Cleanup function
     return () => {
-      // แก้ไขตรงนี้: เรียก unsubscribe ผ่าน authListener.subscription
       authListener?.subscription?.unsubscribe(); 
     };
 

@@ -35,15 +35,13 @@ export default function LoginPage() {
     );
 
     return () => {
-      // แก้ไขตรงนี้: เรียก unsubscribe ผ่าน authListener.subscription
       authListener?.subscription?.unsubscribe(); 
     };
   }, [router]);
 
   const handleLogin = async () => {
-    setMessage(''); // Clear previous messages
-    // เพิ่ม options: { emailRedirectTo: window.location.origin + '/admin' } เพื่อให้ Supabase Redirect กลับมาที่หน้า Admin
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/admin' } }); 
+    setMessage('');
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/admin' } });
     if (error) {
       setMessage('❌ ไม่สามารถส่งลิงก์เข้าสู่ระบบได้: ' + error.message);
     } else {
