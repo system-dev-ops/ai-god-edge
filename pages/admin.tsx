@@ -1,59 +1,109 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, User } from '@supabase/supabase-js'
 
+// กำหนด Interface สำหรับ Chat Log เพื่อความชัดเจนของ Type
+interface ChatLog {
+  id: string;
+  session_id: string;
+  role: string;
+  content: string;
+  created_at: string;
+}
+
+// ✅ ใส่ ENV จาก .env.local หรือ Vercel Environment
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-interface ChatLog {
-  id: string
-  session_id: string
-  role: string
-  content: string
-  created_at: string
-}
-
 export default function AdminPage() {
+  const [user, setUser] = useState<User | null>(null)
   const [logs, setLogs] = useState<ChatLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
-  const router = useRouter()
+  const [email, setEmail] = useState('')
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession()
-      if (!data.session?.user) {
-        router.push('/login')
-      } else {
-        setUser(data.session.user)
+    const getSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (session?.user) {
+        setUser(session.user)
       }
+
+      setLoading(false)
     }
-    checkAuth()
-  }, [router])
+
+    getSession()
+
+    // เพิ่ม listener สำหรับ Auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setUser(session?.user || null);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+
+    // Cleanup function
+    return () => {
+      // แก้ไขตรงนี้: เรียก unsubscribe ผ่าน authListener.subscription
+      authListener?.subscription?.unsubscribe(); 
+    };
+
+  }, [])
 
   useEffect(() => {
     if (!user) return
+
     const fetchLogs = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from('chat_logs')
         .select('*')
         .order('created_at', { ascending: true })
 
-      if (!error) setLogs(data as ChatLog[])
-      else console.error(error)
-      setLoading(false)
+      if (!error) {
+        setLogs(data as ChatLog[] || [])
+      } else {
+        console.error('❌ Error fetching logs:', error)
+        alert('❌ ไม่สามารถดึงข้อมูล Logs ได้: ' + error.message);
+      }
+      setLoading(false);
     }
+
     fetchLogs()
   }, [user])
 
+  const handleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOtp({ email })
+    if (error) {
+      alert('❌ ไม่สามารถส่งลิงก์เข้าสู่ระบบได้: ' + error.message)
+    } else {
+      alert('✅ ส่งลิงก์เข้าสู่อีเมลแล้ว กรุณาตรวจสอบ Inbox หรือ Junk Mail')
+    }
+  }
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      alert('❌ ไม่สามารถออกจากระบบได้: ' + error.message);
+    } else {
+      alert('✅ ออกจากระบบสำเร็จ');
+      setUser(null);
+    }
+  };
+
   const exportToCSV = () => {
     const header = 'session_id,role,content\n'
-    const rows = logs.map((log) =>
-      `"${log.session_id}","${log.role}","${log.content.replace(/"/g, '""')}"`
+    const rows = logs.map(
+      (log) =>
+        `"${log.session_id}","${log.role}","${log.content.replace(/"/g, '""')}"`
     )
     const csvContent = header + rows.join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -63,7 +113,26 @@ export default function AdminPage() {
     link.click()
   }
 
-  if (loading) return <p>Loading...</p>
+  if (loading) return <div>🔄 กำลังโหลด...</div>
+
+  if (!user) {
+    return (
+      <div style={{ padding: 20 }}>
+        <h2>🔐 เข้าสู่ระบบผู้ดูแล</h2>
+        <input
+          type="email"
+          placeholder="กรอกอีเมลของคุณ"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ padding: 10, width: '300px' }}
+        />
+        <br />
+        <button onClick={handleLogin} style={{ marginTop: 10, padding: '10px 20px' }}>
+          ส่งลิงก์เข้าสู่ระบบ
+        </button>
+      </div>
+    )
+  }
 
   const grouped = logs.reduce((acc, log) => {
     if (!acc[log.session_id]) acc[log.session_id] = []
@@ -72,21 +141,33 @@ export default function AdminPage() {
   }, {} as Record<string, ChatLog[]>)
 
   return (
-    <main style={{ padding: 20 }}>
-      <h1>Admin Dashboard</h1>
-      <p>👤 {user?.email}</p>
-      <button onClick={exportToCSV}>📄 Export CSV</button>
-      {Object.entries(grouped).map(([session, logs]) => (
-        <div key={session}>
-          <h3>Session: {session}</h3>
-          {logs.map((log) => (
-            <p key={log.id}>
-              <strong>{log.role === 'user' ? '🙋‍♂️ User' : '🤖 AI'}:</strong> {log.content}
-            </p>
+    <main style={{ padding: 20, maxWidth: 800, margin: 'auto' }}>
+      <h1>🧠 Admin - ประวัติแชต AI God</h1>
+      <p>👤 ผู้ใช้: {user.email}</p>
+      <button onClick={exportToCSV} style={{ margin: '10px 0' }}>
+        📄 Export เป็น CSV
+      </button>
+      <button onClick={handleLogout} style={{ margin: '10px 0 10px 10px', background: '#dc2626', color: 'white' }}>
+        🚪 ออกจากระบบ
+      </button>
+
+      {Object.keys(grouped).length === 0 ? (
+        <p>🤖 ยังไม่มีข้อความที่บันทึก</p>
+      ) : (
+        <div style={{ maxHeight: 600, overflowY: 'auto', border: '1px solid #ccc', padding: 10 }}>
+          {(Object.entries(grouped) as [string, ChatLog[]][]).map(([sessionId, sessionLogs]) => (
+            <div key={sessionId} style={{ marginBottom: 30 }}>
+              <h3>🧬 Session: {sessionId}</h3>
+              {sessionLogs.map((log) => (
+                <div key={log.id}>
+                  <strong>{log.role === 'user' ? '🙋‍♂️ User' : '🤖 AI'}:</strong> {log.content}
+                </div>
+              ))}
+              <hr />
+            </div>
           ))}
-          <hr />
         </div>
-      ))}
+      )}
     </main>
   )
 }
