@@ -1,6 +1,6 @@
 'use client'
 
-import { v4 as uuidv4 } from 'uuid'
+import { v4 as uuidv4 } from 'uuid' // ตรวจสอบให้แน่ใจว่ามีการ import uuidv4
 import { useEffect, useRef, useState } from 'react'
 
 export default function Home() {
@@ -8,10 +8,10 @@ export default function Home() {
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([])
   const [loading, setLoading] = useState(false)
 
-  const sessionIdRef = useRef<string>('')
+  const sessionIdRef = useRef<string>('') // ใช้ useRef สำหรับเก็บ session id
 
   useEffect(() => {
-    // กำหนด session id ครั้งเดียวเมื่อ component mount
+    // กำหนด session id เพียงครั้งเดียวเมื่อ component ถูก mount
     if (!sessionIdRef.current) {
       sessionIdRef.current = uuidv4()
     }
@@ -21,27 +21,30 @@ export default function Home() {
     if (!input.trim()) return
     const userMessage = { role: 'user', content: input.trim() }
 
+    // เพิ่มข้อความผู้ใช้ลงใน state ทันทีเพื่อแสดงผลบน UI
     const newMessages = [...messages, userMessage]
-    setMessages(newMessages) // อัปเดต UI ทันทีด้วยข้อความผู้ใช้
-    setInput('')
-    setLoading(true)
+    setMessages(newMessages)
+    setInput('') // เคลียร์ input field
+    setLoading(true) // ตั้งค่าสถานะโหลด
 
     try {
       const res = await fetch('/api/chat', {
-        method: 'POST', // ตรวจสอบให้แน่ใจว่า Method เป็น POST
+        method: 'POST', // ตรวจสอบให้แน่ใจว่า HTTP Method เป็น POST
         headers: {
           'Content-Type': 'application/json',
         },
+        // ส่งข้อความทั้งหมดในแชทไปเพื่อให้ AI มีบริบท และส่ง session_id ไปด้วย
         body: JSON.stringify({
           messages: newMessages,
-          session_id: sessionIdRef.current,
+          session_id: sessionIdRef.current, // ส่ง session_id ไปยัง API
         }),
       })
 
       const data = await res.json() // รับ JSON response จาก API Route
 
+      // ตรวจสอบว่า HTTP response เป็น OK (สถานะ 200) หรือไม่
       if (res.ok) {
-        // ถ้า API ตอบกลับ 200 OK และมีโครงสร้างตามที่คาดหวัง
+        // ตรวจสอบโครงสร้างของข้อมูลที่ได้รับกลับมาอย่างละเอียด
         if (data && typeof data.content === 'string' && typeof data.role === 'string') {
           const aiMessage = data // data คือ object ข้อความของ AI โดยตรง
           setMessages((prev) => [...prev, aiMessage]) // เพิ่มข้อความ AI ลงใน state
